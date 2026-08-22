@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - CPU_LIMIT=1.0
+      - MEMORY_LIMIT=256m
+      - MAX_EXECUTION_TIME_SEC=5
+      - MAX_SOURCE_SIZE_BYTES=102400
+      - MAX_STDIN_SIZE_BYTES=102400
+      - MAX_STDOUT_SIZE_BYTES=1048576
+      - MAX_PIDS=64
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
