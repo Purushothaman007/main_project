@@ -4,6 +4,7 @@ from app.core.config import settings
 from app.core.logging_config import setup_logging
 from app.api.v1.health import router as health_router
 from app.api.v1.execute import router as execute_router
+from app.api.v1.ai import router as ai_router
 
 setup_logging()
 
@@ -27,3 +28,5 @@ app.add_middleware(
 # Register routers
 app.include_router(health_router)
 app.include_router(execute_router, prefix=settings.API_V1_STR)
+app.include_router(ai_router, prefix=settings.API_V1_STR)
+

@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     MAX_STDIN_SIZE_BYTES: int = Field(default=100 * 1024, description="Max stdin size in bytes (100KB)")
     MAX_STDOUT_SIZE_BYTES: int = Field(default=1 * 1024 * 1024, description="Max stdout size in bytes (1MB)")
     MAX_PIDS: int = Field(default=64, description="Max process limit")
+    GEMINI_API_KEY: str = Field(default="", description="Google Gemini API key")
+
 
     model_config = SettingsConfigDict(
         env_file=".env",

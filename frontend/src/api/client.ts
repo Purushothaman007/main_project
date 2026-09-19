@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { ExecutionRequest, ExecutionResponse } from '../types/execution';
+import { AIChatRequest, AIChatResponse } from '../types/ai';
 
 const api = axios.create({
   baseURL: '',
@@ -33,3 +34,23 @@ export const executeCodeApi = async (req: ExecutionRequest): Promise<ExecutionRe
     };
   }
 };
+
+export const sendAIChatApi = async (req: AIChatRequest): Promise<AIChatResponse> => {
+  try {
+    const response = await api.post<AIChatResponse>('/api/v1/ai/chat', req);
+    return response.data;
+  } catch (error: any) {
+    let errorMessage = 'AI Service unreachable or encountered a network error.';
+    if (error.response && error.response.data && error.response.data.response) {
+      errorMessage = error.response.data.response;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+
+    return {
+      response: `⚠️ ${errorMessage}`,
+      is_refusal: false,
+    };
+  }
+};
+

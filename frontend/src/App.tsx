@@ -1,77 +1,43 @@
-import React, { useState } from 'react';
-import { SupportedLanguage, ExecutionResponse } from './types/execution';
-import { DEFAULT_SNIPPETS } from './utils/defaultSnippets';
-import { Header } from './components/Header';
-import { CodeEditor } from './components/CodeEditor';
-import { StdinPanel } from './components/StdinPanel';
-import { OutputPanel } from './components/OutputPanel';
-import { executeCodeApi } from './api/client';
+import React, { useState, useEffect } from 'react';
+import { STATIC_QUESTIONS } from './data/questions';
+import { QuestionList } from './components/QuestionList/QuestionList';
+import { QuestionWorkspace } from './components/QuestionWorkspace/QuestionWorkspace';
 
 export const App: React.FC = () => {
-  const [language, setLanguage] = useState<SupportedLanguage>('python');
-  const [code, setCode] = useState<string>(DEFAULT_SNIPPETS.python);
-  const [stdin, setStdin] = useState<string>('');
-  const [result, setResult] = useState<ExecutionResponse | null>(null);
-  const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [currentPath, setCurrentPath] = useState<string>(window.location.pathname);
 
-  const handleLanguageChange = (newLang: SupportedLanguage) => {
-    setLanguage(newLang);
-    setCode(DEFAULT_SNIPPETS[newLang]);
-    setResult(null);
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateTo = (path: string) => {
+    window.history.pushState({}, '', path);
+    setCurrentPath(path);
   };
 
-  const handleClear = () => {
-    setCode(DEFAULT_SNIPPETS[language]);
-    setStdin('');
-    setResult(null);
-  };
+  // Route matching: /questions/:questionId
+  const match = currentPath.match(/^\/questions\/([a-zA-Z0-9_-]+)$/);
+  const selectedQuestionId = match ? match[1] : null;
+  const activeQuestion = STATIC_QUESTIONS.find((q) => q.id === selectedQuestionId);
 
-  const handleRun = async () => {
-    setIsRunning(true);
-    setResult(null);
-    try {
-      const response = await executeCodeApi({
-        language,
-        code,
-        stdin,
-      });
-      setResult(response);
-    } catch (error) {
-      console.error('Execution request error:', error);
-    } finally {
-      setIsRunning(false);
-    }
-  };
+  if (activeQuestion) {
+    return (
+      <QuestionWorkspace
+        question={activeQuestion}
+        onBackToList={() => navigateTo('/')}
+      />
+    );
+  }
 
   return (
-    <div className="app-container">
-      <Header
-        language={language}
-        onLanguageChange={handleLanguageChange}
-        onRun={handleRun}
-        onClear={handleClear}
-        isRunning={isRunning}
-      />
-
-      <main className="main-content">
-        <div className="left-pane">
-          <CodeEditor
-            language={language}
-            code={code}
-            onChange={setCode}
-          />
-          <StdinPanel
-            stdin={stdin}
-            onChange={setStdin}
-            disabled={isRunning}
-          />
-        </div>
-
-        <div className="right-pane">
-          <OutputPanel result={result} isRunning={isRunning} />
-        </div>
-      </main>
-    </div>
+    <QuestionList
+      questions={STATIC_QUESTIONS}
+      onSelectQuestion={(id) => navigateTo(`/questions/${id}`)}
+    />
   );
 };
 
