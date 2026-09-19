@@ -1,9 +1,0 @@
-backend
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8001
-
-frontend
-npm run dev
-
-
-
-Read PROJECT_STATE.md first. Do not analyze the entire project. Resume exactly from the CURRENT WORK and NEXT ACTION sections. Inspect only the files relevant to that task. Before making changes, briefly tell me what you believe the current state is.
