@@ -73,9 +73,9 @@ cd backend
 python -m venv .venv
 .\.venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+uvicorn app.main:app --host [IP_ADDRESS] --port 8001 --reload
 ```
-Swagger UI will be accessible at: `http://127.0.0.1:8000/docs`
+Swagger UI will be accessible at: `http://[IP_ADDRESS]/docs`
 
 ### 3. Start the Frontend IDE
 In a new terminal:

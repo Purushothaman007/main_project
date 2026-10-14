@@ -1,4 +1,7 @@
+import io
 import os
+import tarfile
+import threading
 import time
 import socket
 import requests
@@ -85,7 +88,6 @@ class DockerService:
                 working_dir="/app",
                 network_disabled=True,
                 mem_limit=settings.MEMORY_LIMIT,
-                memswap_limit=settings.MEMORY_LIMIT,
                 nano_cpus=int(settings.CPU_LIMIT * 1e9),
                 pids_limit=settings.MAX_PIDS,
                 cap_drop=["ALL"],
@@ -224,4 +226,110 @@ class DockerService:
                         f"Failed to remove container "
                         f"{container.id[:8]}: {e}"
                     )
+
+    # ------------------------------------------------------------------
+    # Warm-pool helpers
+    # ------------------------------------------------------------------
+
+    def put_files_to_container(
+        self,
+        container,
+        files: Dict[str, str],
+    ) -> None:
+        """
+        Upload one or more text files into /app inside a running container
+        using Docker's put_archive API (in-memory tar, no host temp files).
+
+        Args:
+            container: a running Docker container object
+            files:     {filename: text_content} mapping
+        """
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=buf, mode="w") as tar:
+            for filename, content in files.items():
+                data = content.encode("utf-8")
+                info = tarfile.TarInfo(name=filename)
+                info.size = len(data)
+                tar.addfile(info, io.BytesIO(data))
+        buf.seek(0)
+        container.put_archive("/app", buf)
+
+    def exec_in_warm_container(
+        self,
+        container,
+        command: List[str],
+        timeout_sec: int,
+        max_output_bytes: int = 1 * 1024 * 1024,
+    ) -> Tuple[bool, int, str, str, int]:
+        """
+        Execute a command inside an already-running warm container via
+        docker exec (no create/start overhead).
+
+        Returns:
+            (timed_out, exit_code, stdout_str, stderr_str, duration_ms)
+
+        Timeout is enforced by running exec_run in a daemon thread and
+        joining with a timeout; on expiry the container is left for
+        release_and_replace() to kill and remove.
+        """
+        result_holder: list = [None]
+        exc_holder:    list = [None]
+        start_time = time.perf_counter()
+
+        def _run():
+            try:
+                exit_code, (stdout_bytes, stderr_bytes) = container.exec_run(
+                    command,
+                    stdout=True,
+                    stderr=True,
+                    demux=True,
+                    user="1000:1000",
+                    workdir="/app",
+                )
+                result_holder[0] = (
+                    exit_code,
+                    stdout_bytes or b"",
+                    stderr_bytes or b"",
+                )
+            except Exception as e:
+                exc_holder[0] = e
+
+        t = threading.Thread(target=_run, daemon=True)
+        t.start()
+        t.join(timeout=timeout_sec)
+
+        duration_ms = int((time.perf_counter() - start_time) * 1000)
+
+        if t.is_alive():
+            # Timed out — kill the container; release_and_replace will remove it
+            try:
+                container.kill()
+            except Exception:
+                pass
+            return True, -1, "", "", duration_ms
+
+        if exc_holder[0]:
+            raise exc_holder[0]
+
+        exit_code, stdout_bytes, stderr_bytes = result_holder[0]
+
+        # Enforce output limits
+        output_exceeded = False
+        if len(stdout_bytes) > max_output_bytes:
+            output_exceeded = True
+            stdout_bytes = stdout_bytes[:max_output_bytes]
+        if len(stderr_bytes) > max_output_bytes:
+            output_exceeded = True
+            stderr_bytes = stderr_bytes[:max_output_bytes]
+
+        stdout_str = stdout_bytes.decode("utf-8", errors="replace")
+        stderr_str = stderr_bytes.decode("utf-8", errors="replace")
+
+        logger.info(
+            f"[WARM EXEC] {' '.join(str(c) for c in command[:3])}... | "
+            f"{duration_ms}ms | exit={exit_code}"
+        )
+
+        return False, exit_code, stdout_str, stderr_str, duration_ms
+
 docker_service = DockerService()

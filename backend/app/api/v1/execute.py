@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, HTTPException, status
 from app.schemas.execute import ExecutionRequest, ExecutionResponse, ExecutionStatus
 from app.services.execution_service import execution_service
@@ -12,7 +13,8 @@ async def execute_code(request: ExecutionRequest) -> ExecutionResponse:
     Returns structured execution result containing status, logs, exit code, and execution time.
     """
     try:
-        return execution_service.execute_code(request)
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, execution_service.execute_code, request)
     except Exception as e:
         logger.error(f"Unhandled exception in execute_code endpoint: {e}", exc_info=True)
         return ExecutionResponse(
