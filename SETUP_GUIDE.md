@@ -86,8 +86,8 @@ docker build -t college-code-cpp:gcc -f docker/cpp/Dockerfile docker/cpp
    ```bash
    pip install -r requirements.txt
    ```
-5. *(Optional)* Configure custom environment variables:
-   If you want to customize memory or CPU limits, copy `.env.example` to `.env`:
+5. Configure environment variables:
+   Copy `.env.example` to `.env`, then add your Google Gemini API key to `GEMINI_API_KEY` to enable AI hints. Keep `.env` private; it is excluded from Git. You can leave the key blank if you do not need AI hints.
    * **Windows (PowerShell):** `copy .env.example .env`
    * **macOS / Linux:** `cp .env.example .env`
 6. Start the FastAPI server:

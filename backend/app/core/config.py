@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
@@ -15,8 +17,14 @@ class Settings(BaseSettings):
     MAX_STDOUT_SIZE_BYTES: int = Field(default=1 * 1024 * 1024, description="Max stdout size in bytes (1MB)")
     MAX_PIDS: int = Field(default=64, description="Max process limit")
 
+    # Gemini AI Hint Assistant
+    GEMINI_API_KEY: str = Field(default="", description="Google Gemini API key")
+    GEMINI_MODEL: str = Field(default="gemini-3.8-flash", description="Gemini model name")
+    GROQ_API_KEY: str = Field(default="", description="Groq API key for hint fallback")
+    GROQ_MODEL: str = Field(default="llama-3.3-70b-versatile", description="Groq model name")
+
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=Path(__file__).resolve().parents[2] / ".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore"

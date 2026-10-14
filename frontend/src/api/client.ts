@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { ExecutionRequest, ExecutionResponse } from '../types/execution';
+import { HintRequest, HintResponse } from '../types/hint';
 
 const api = axios.create({
   baseURL: '',
@@ -31,5 +32,24 @@ export const executeCodeApi = async (req: ExecutionRequest): Promise<ExecutionRe
       status: 'SYSTEM_ERROR',
       execution_id: 'exec_net_error',
     };
+  }
+};
+
+/**
+ * Request a progressive hint from the Gemini-powered hint assistant.
+ * Throws an error string on failure so the UI can display it directly.
+ */
+export const getHintApi = async (req: HintRequest): Promise<HintResponse> => {
+  try {
+    const response = await api.post<HintResponse>('/api/ai/hints', req);
+    return response.data;
+  } catch (error: any) {
+    let msg = 'Could not reach the hint service.';
+    if (error.response?.data?.detail) {
+      msg = error.response.data.detail;
+    } else if (error.message) {
+      msg = error.message;
+    }
+    throw new Error(msg);
   }
 };
